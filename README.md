@@ -27,7 +27,7 @@ where:
 - $x_{t,pos}, x_{t,neg}, x_{t,denoised}:$ The model's positive prompt prediction, negative prompt prediction, and the final denoised result respectively, at a specific timestep, in data parameterization $x_0.$
   - $x_{t,pos}, x_{t,neg}$ may sometimes be written as $x_{t,cond}, x_{t,uncond}$
 - $s_{t,pos}, s_{t,neg}:$ The model's positive and negative predictions in score parameterization $s,$ namely $\nabla_x \log p(x).$
-- $\phi_t(\cdot):$ Any arbitrary function that depends on time and the L2 norm of the differences between the score predictions, namely $|s_{t,pos}-s_{t,neg}|_2,$ satisfying $\lim_{s\to0}[s\phi(s)]=0.$
+- $\phi_t(\cdot):$ Any arbitrary function that depends on time and the L2 norm of the differences between the score predictions, namely $|s_{t,pos}-s_{t,neg}|\_2,$ satisfying $\lim_{s\to0}[s\phi(s)]=0.$
 - The above technically differs from the paper, as the latter bases on $x_{t,pos}$ but comfy opts for basing on $x_{t,neg}.$ I follow comfy's convention in this extension.
 
 ### In Relation to Other CFG Modifications
