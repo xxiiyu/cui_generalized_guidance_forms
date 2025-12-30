@@ -63,8 +63,8 @@ class PowerLawCFG(io.ComfyNode):
             # s = (alpha_t / sigma_t^2) * x0
             # add 1 to denom as sigma approaches 0 to avoid numerical errors.
             dS: torch.Tensor = cond - uncond
-            model_type = model.get_model_object("model_sampling")
-            if model_type == ModelSamplingDiscreteFlow:  # assume RF
+            model_type = model.model.model_sampling
+            if isinstance(model_type, ModelSamplingDiscreteFlow):  # assume RF
                 dS *= (1 - sigma) / (sigma**2 + 1)
             else:  # model_type in [EPS, V_PREDICTION]:  # assume VE
                 # SD 1.x / SDXL is VP, but comfy uses k-diffu convention, so sigma is VE-like
@@ -77,8 +77,9 @@ class PowerLawCFG(io.ComfyNode):
 
             if print_debug:
                 print(
+                    "",
                     # f"[cui-ggf] sigma = {sigma}",
-                    f"\n[cui-ggf] l2 = {l2.squeeze()}",
+                    f"[cui-ggf] l2 = {l2.squeeze()}",
                     f"[cui-ggf] power_scale = {pow_scale.squeeze()}",
                     f"[cui-ggf] effective_cfg = {phi_t.squeeze()}",
                     sep="\n",
