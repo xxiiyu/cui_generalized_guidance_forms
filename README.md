@@ -1,6 +1,6 @@
 # CUI-GeneralizedGuidanceForms
 
-Unofficial implementation of '[Classifier-Free Guidance: From High-Dimensional Analysis to Generalized Guidance Forms](https://arxiv.org/abs/2502.07849)' for ComfyUI.
+Unofficial implementation of '[Classifier-Free Guidance: From High-Dimensional Analysis to Generalized Guidance Forms](https://arxiv.org/abs/2502.07849)' for ComfyUI. (cui-ggf for short)
 
 ## Installation
 
@@ -16,10 +16,9 @@ Most nodes & parameters should have hover tooltips that you can read for more in
 ### `advanced/guidance/`
 
 - **Power Law CFG:** An implementation of the power-law cfg from the same paper.
-- **CFG++:** An implementation of '[CFG++: Manifold-constrained Classifier Free Guidance for Diffusion Models](https://openreview.net/forum?id=E77uvbOTtp)' as a generic model patch. 
-  - Should in theory work with most samplers across most model types.
-  - There will be discrepancies between this and `_cfg_pp` samplers, as the latter uses comfy's alt implementation.
-  - There are small differences between this and the regular version of `SamplerEulerCFG++` which I assume is due to float imprecision errors?
+- **CFG++:** An implementation of '[CFG++: Manifold-constrained Classifier Free Guidance for Diffusion Models](https://openreview.net/forum?id=E77uvbOTtp)' as a generic model patch. (specifically, a weight scheduler, as per Appendix D.)
+  - Should "work" with most samplers across most model types. However, unless using `euler`, this node won't exactly match the output of a true `_cfg_pp` sampler. Prefer the latter if it exists.
+  - Discrepancies are larger between `_ancestral_cfg_pp` samplers, as those additionally have access to more accurate step sizes than this node does.
 
 ## Technical Details
 
@@ -49,7 +48,7 @@ Many other alternate CFG methods can also be expressed through this framework by
 
 **Notes:**
 1. $\mathbb I_{[t1, t2)}$ equals 1 if time is between $[t1, t2),$ and 0 otherwise. In essense, Limited Interval CFG turns on CFG only if the timestep is within this interval.
-2. One can achieve the same effect of CFG++ by using a specific CFG schedule. 
+2. One can achieve the same effect of CFG++ by using a specific CFG schedule, assuming the sampler is `euler`.
 
 ### On Empirical Effects of Non-Linear CFG
 

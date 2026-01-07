@@ -15,7 +15,7 @@ class CFGPP(io.ComfyNode):
     def define_schema(cls) -> io.Schema:
         return io.Schema(
             node_id="cfgpp_cui-ggf",
-            display_name="CFG++",
+            display_name="NaiveCFG++",
             category="advanced/guidance",
             inputs=[
                 io.Model.Input("model"),
@@ -27,7 +27,8 @@ class CFGPP(io.ComfyNode):
             ],
             outputs=[io.Model.Output()],
             description=(
-                "Implements CFG++ (2406.08070) as a model patch.\n"
+                "A naive implementation of CFG++ (2406.08070) as a weight scheduler.\n"
+                "There will be discrepancies between using this and actual `_cfg_pp` samplers. The two are only equivalent when using `euler`.\n"
                 "Disables the speed optimization when `cfg=1`, as the negative term no longer cancels out.\n"
             ),
         )
