@@ -11,9 +11,15 @@ After installation, restart ComfyUI.
 
 ## Features
 
-- **Power Law CFG:** an implementation of the Power-law cfg in the same paper.
-
 Most nodes & parameters should have hover tooltips that you can read for more information.
+
+### `advanced/guidance/`
+
+- **Power Law CFG:** An implementation of the power-law cfg from the same paper.
+- **CFG++:** An implementation of '[CFG++: Manifold-constrained Classifier Free Guidance for Diffusion Models](https://openreview.net/forum?id=E77uvbOTtp)' as a generic model patch. 
+  - Should in theory work with most samplers across most model types.
+  - There will be discrepancies between this and `_cfg_pp` samplers, as the latter uses comfy's alt implementation.
+  - There are small differences between this and the regular version of `SamplerEulerCFG++` which I assume is due to float imprecision errors?
 
 ## Technical Details
 
@@ -39,11 +45,11 @@ Many other alternate CFG methods can also be expressed through this framework by
 | CFG                                                      | $\omega$                               |
 | Scheduled CFG                                            | $\omega_t$                             |
 | [Limited Interval CFG](https://arxiv.org/abs/2404.07724) | $(\omega-1)\cdot\mathbb I_{[t1,t2)}+1$ | *1    |
-| [CFG++](https://arxiv.org/abs/2406.08070)                | -                                      | *2    |
+| [CFG++](https://arxiv.org/abs/2406.08070)                | $\omega_t$                             | *2    |
 
 **Notes:**
 1. $\mathbb I_{[t1, t2)}$ equals 1 if time is between $[t1, t2),$ and 0 otherwise. In essense, Limited Interval CFG turns on CFG only if the timestep is within this interval.
-2. While CFG++ says it could be achieved with a CFG schedule (page 10), the proposed schedule doesn't actually make CFG into CFG++.
+2. One can achieve the same effect of CFG++ by using a specific CFG schedule. 
 
 ### On Empirical Effects of Non-Linear CFG
 

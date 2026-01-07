@@ -2,7 +2,7 @@ import typing
 import math
 from inspect import cleandoc
 from comfy_api.latest import ComfyExtension, io
-from comfy.model_sampling import EPS, X0, V_PREDICTION, ModelSamplingDiscreteFlow
+import comfy.model_sampling
 
 if typing.TYPE_CHECKING:
     from comfy.model_patcher import ModelPatcher
@@ -41,7 +41,7 @@ class PowerLawCFG(io.ComfyNode):
             ],
             outputs=[io.Model.Output()],
             description=(
-                "Implements the 'Power-law CFG' as found in the same paper (2502.07849).\n"
+                "Implements 'Power-law CFG' as found in the same paper (2502.07849).\n"
                 "Disables the speed optimization when `cfg=1`, as the negative term no longer cancels out.\n"
             ),
         )
@@ -59,29 +59,56 @@ class PowerLawCFG(io.ComfyNode):
             x_t = args["input"]
             sigma = args["sigma"]
 
+            # just in case sigmas are different across batches somehow
+            shape = (x_t.shape[0],) + (1,) * (x_t.ndim - 1)
+            sigma = sigma.view(shape)
+
             # difference in scores
             # s = (alpha_t / sigma_t^2) * x0
             # add 1 to denom as sigma approaches 0 to avoid numerical errors.
             dS: torch.Tensor = cond - uncond
             model_type = model.model.model_sampling
-            if isinstance(model_type, ModelSamplingDiscreteFlow):  # assume RF
+            if isinstance(model_type, comfy.model_sampling.CONST):  # RF
                 dS *= (1 - sigma) / (sigma**2 + 1)
-            else:  # model_type in [EPS, V_PREDICTION]:  # assume VE
-                # SD 1.x / SDXL is VP, but comfy uses k-diffu convention, so sigma is VE-like
+            else:  # VE
                 dS *= 1 / (sigma**2 + 1)
 
             l2 = torch.norm(dS, p=2, dim=list(range(1, dS.ndim)), keepdim=True)
-            pow_scale = torch.pow(l2 + 1e-6, alpha)
+            scale = torch.pow(l2 + 1e-6, alpha)
             # pow_scale = pow_scale.clamp(0.1, 2)  # prevent crazy scales
-            phi_t = (pow_scale * cond_scale).clamp(min=1.0)
+            phi_t = (scale * cond_scale).clamp(min=1.0)
 
             if print_debug:
+                if sigma.numel() == 1:
+                    sigma_display = sigma.item()
+                    scale_display = scale.item()
+                    phi_t_display = phi_t.item()
+                else:
+                    sigma_display = sigma.squeeze()
+                    scale_display = scale.squeeze()
+                    phi_t_display = phi_t.squeeze()
                 print(
                     "",
-                    # f"[cui-ggf] sigma = {sigma}",
-                    f"[cui-ggf] l2 = {l2.squeeze()}",
-                    f"[cui-ggf] power_scale = {pow_scale.squeeze()}",
-                    f"[cui-ggf] effective_cfg = {phi_t.squeeze()}",
+                    f"[cui-ggf] sigma = {sigma_display}",
+                    f"[cui-ggf] scale = {scale_display}",
+                    f"[cui-ggf] effective_cfg = {phi_t_display}",
+                    sep="\n",
+                )
+
+            if print_debug:
+                if phi_t.numel() == 1:
+                    l2_display = l2.item()
+                    scale_display = scale.item()
+                    phi_t_display = phi_t.item()
+                else:
+                    l2_display = l2.squeeze()
+                    scale_display = scale.squeeze()
+                    phi_t_display = phi_t.squeeze()
+                print(
+                    "",
+                    f"[cui-ggf] l2 = {l2_display}",
+                    f"[cui-ggf] scale = {scale_display}",
+                    f"[cui-ggf] effective_cfg = {phi_t_display}",
                     sep="\n",
                 )
 
