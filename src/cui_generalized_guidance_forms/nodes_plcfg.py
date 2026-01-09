@@ -79,23 +79,6 @@ class PowerLawCFG(io.ComfyNode):
             phi_t = (scale * cond_scale).clamp(min=1.0)
 
             if print_debug:
-                if sigma.numel() == 1:
-                    sigma_display = sigma.item()
-                    scale_display = scale.item()
-                    phi_t_display = phi_t.item()
-                else:
-                    sigma_display = sigma.squeeze()
-                    scale_display = scale.squeeze()
-                    phi_t_display = phi_t.squeeze()
-                print(
-                    "",
-                    f"[cui-ggf] sigma = {sigma_display}",
-                    f"[cui-ggf] scale = {scale_display}",
-                    f"[cui-ggf] effective_cfg = {phi_t_display}",
-                    sep="\n",
-                )
-
-            if print_debug:
                 if phi_t.numel() == 1:
                     l2_display = l2.item()
                     scale_display = scale.item()

@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "cui-generalized-guidance-forms"
-version = "1.0.3"
+version = "1.0.4"
 description = "Unofficial implementation of 'Classifier-Free Guidance: From High-Dimensional Analysis to Generalized Guidance Forms' for ComfyUI. (cui-ggf for short)"
 authors = [{ name = "xxiiyu" }]
 readme = "README.md"
