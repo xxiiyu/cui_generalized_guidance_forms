@@ -15,7 +15,7 @@ class PowerLawCFG(io.ComfyNode):
     def define_schema(cls) -> io.Schema:
         return io.Schema(
             node_id="powerlaw-cfg_cui-ggf",
-            display_name="Power Law CFG",
+            display_name="PowerLawCFG",
             category="advanced/guidance",
             inputs=[
                 io.Model.Input("model"),
@@ -23,15 +23,28 @@ class PowerLawCFG(io.ComfyNode):
                     "alpha",
                     tooltip=(
                         "The exponent for the 'power law,' which finds a number to multiply `cfg` by at each step.\n"
-                        "0: disable\n"
-                        "<0: guidance which speeds up convergence to the target at early times\n"
-                        ">0: dampen guidance if positive and negative are similar; amplify guidance if positive and negative are dissimilar.\n"
+                        "Values > 0 are recommended by the paper authors.\n"
+                        "  0: disable\n"
+                        "  <0: guidance which speeds up convergence to the target at early times\n"
+                        "  >0: dampen guidance if positive and negative are similar; amplify guidance if positive and negative are dissimilar.\n"
                     ),
                     default=0.9,
                     min=-0.99,
                     max=100.0,
                     step=0.01,
                     display_mode=io.NumberDisplay.number,
+                ),
+                io.Combo.Input(
+                    "parameterization",
+                    ["score", "x0", "eps", "v", "flow"],
+                    default="score",
+                    tooltip=(
+                        "The space in which to calculate the scale. You do NOT have to match this with your model type, they can be different.\n"
+                        "In practice, `score` seems to be the most stable.\n"
+                        "  score: The default implementation.\n"
+                        "  x0: 'Rescaled Power-law CFG' in the paper.\n"
+                        "  eps/v/flow: Other parameterizations for completeness's sake.\n"
+                    ),
                 ),
                 io.Boolean.Input(
                     "print_debug",
@@ -48,7 +61,11 @@ class PowerLawCFG(io.ComfyNode):
 
     @classmethod
     def execute(
-        cls, model: "ModelPatcher", alpha: float, print_debug: bool
+        cls,
+        model: "ModelPatcher",
+        alpha: float,
+        parameterization: str,
+        print_debug: bool,
     ) -> io.NodeOutput:
         m = model.clone()
 
@@ -63,17 +80,24 @@ class PowerLawCFG(io.ComfyNode):
             shape = (x_t.shape[0],) + (1,) * (x_t.ndim - 1)
             sigma = sigma.view(shape)
 
-            # difference in scores
-            # s = (alpha_t / sigma_t^2) * x0
-            # add 1 to denom as sigma approaches 0 to avoid numerical errors.
-            dS: torch.Tensor = cond - uncond
-            model_type = model.model.model_sampling
-            if isinstance(model_type, comfy.model_sampling.CONST):  # RF
-                dS *= (1 - sigma) / (sigma**2 + 1)
-            else:  # VE
-                dS *= 1 / (sigma**2 + 1)
+            d = cond - uncond
+            is_rf = isinstance(model.model.model_sampling, comfy.model_sampling.CONST)
+            if parameterization == "score":
+                # s = (alpha_t / sigma_t^2) * x0
+                # add 1 to denom as sigma approaches 0 to avoid numerical errors.
+                if is_rf:
+                    d *= (1 - sigma) / (sigma**2 + 1)
+                else:  # VE
+                    d *= 1 / (sigma**2 + 1)
+            elif parameterization in ["eps", "v", "flow"]:
+                # eps = (x_t - alpha_t*x0) / sigma_t
+                # v = alpha_t*eps - sigma_t*x0
+                # u = (x_t - x_0) / sigma_t
+                d *= 1 / (sigma + 1)
+            else:  # x0
+                pass
 
-            l2 = torch.norm(dS, p=2, dim=list(range(1, dS.ndim)), keepdim=True)
+            l2 = torch.norm(d, p=2, dim=list(range(1, d.ndim)), keepdim=True)
             scale = torch.pow(l2 + 1e-6, alpha)
             # pow_scale = pow_scale.clamp(0.1, 2)  # prevent crazy scales
             phi_t = (scale * cond_scale).clamp(min=1.0)
@@ -89,6 +113,7 @@ class PowerLawCFG(io.ComfyNode):
                     phi_t_display = phi_t.squeeze()
                 print(
                     "",
+                    f"[cui-ggf] param = {parameterization}",
                     f"[cui-ggf] l2 = {l2_display}",
                     f"[cui-ggf] scale = {scale_display}",
                     f"[cui-ggf] effective_cfg = {phi_t_display}",
